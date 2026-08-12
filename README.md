@@ -9,7 +9,7 @@ in one place.
 
 1. Pratha - GitHub: prathag19-debug
 2. Priya - GitHub: priya-dev5680
-3. Pankhoodee - GitHub: GLB25116CN380
+3. Pankhoodee - GitHub: 25116cn380-coder
 
 ## Project Overview
 
