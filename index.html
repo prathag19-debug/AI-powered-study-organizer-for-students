@@ -1,0 +1,349 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudySpace - Study Organizer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f5fb;
+      color: #25304a;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    header {
+      background: linear-gradient(135deg, #536dfe, #8256d9);
+      color: white;
+      padding: 30px;
+      border-radius: 18px;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      margin-bottom: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card, .panel {
+      background: white;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 3px 12px #1e2b4d0b;
+    }
+
+    .card h2 {
+      color: #536dfe;
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .panel {
+      margin-bottom: 22px;
+    }
+
+    h3 {
+      margin-bottom: 16px;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 10px;
+    }
+
+    input, select, button {
+      padding: 12px;
+      border: 1px solid #dce1ed;
+      border-radius: 8px;
+      font-size: 14px;
+      min-width: 0;
+    }
+
+    button {
+      background: #536dfe;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      opacity: 0.88;
+    }
+
+    .task {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #edf0f6;
+    }
+
+    .task:last-child {
+      border-bottom: none;
+    }
+
+    .task-info {
+      flex: 1;
+      overflow-wrap: anywhere;
+    }
+
+    .task-info p {
+      color: #778099;
+      font-size: 13px;
+      margin-top: 5px;
+    }
+
+    .completed strong {
+      text-decoration: line-through;
+      color: #8a91a3;
+    }
+
+    .delete {
+      background: #ffe9e9;
+      color: #bd3434;
+      padding: 9px 12px;
+    }
+
+    .progress-track {
+      height: 10px;
+      background: #e9ecf5;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: #39b980;
+      transition: width 0.3s;
+    }
+
+    #empty {
+      color: #858da1;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    @media (max-width: 650px) {
+      body {
+        padding: 12px;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      form {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header>
+      <h1>📚 StudySpace</h1>
+      <p>Plan smart. Study better. Achieve more.</p>
+    </header>
+
+    <section class="stats">
+      <div class="card">
+        <h2 id="total">0</h2>
+        <p>Total Tasks</p>
+      </div>
+      <div class="card">
+        <h2 id="done">0</h2>
+        <p>Completed</p>
+      </div>
+      <div class="card">
+        <h2 id="pending">0</h2>
+        <p>Remaining</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>📈 Overall Progress</h3>
+      <p id="progressText">0% completed</p>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>➕ Add a Study Task</h3>
+      <form id="taskForm">
+        <input id="taskName" placeholder="Task or assignment name"
+               required maxlength="120">
+        <select id="subject" aria-label="Subject">
+          <option>Mathematics</option>
+          <option>Science</option>
+          <option>English</option>
+          <option>Computer</option>
+          <option>History</option>
+          <option>Other</option>
+        </select>
+        <input id="dueDate" type="date" aria-label="Due date" required>
+        <button type="submit">Add Task</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h3>📝 My Study Tasks</h3>
+      <div id="taskList"></div>
+      <p id="empty">No tasks yet. Add your first study task!</p>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("taskForm");
+    const taskList = document.getElementById("taskList");
+    const empty = document.getElementById("empty");
+
+    let tasks = [];
+
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem("studySpaceTasks") || "[]"
+      );
+      if (Array.isArray(saved)) {
+        tasks = saved.filter(task =>
+          task &&
+          typeof task.id === "string" &&
+          typeof task.name === "string" &&
+          typeof task.subject === "string" &&
+          typeof task.date === "string" &&
+          typeof task.completed === "boolean"
+        );
+      }
+    } catch {
+      tasks = [];
+    }
+
+    function saveTasks() {
+      try {
+        localStorage.setItem(
+          "studySpaceTasks",
+          JSON.stringify(tasks)
+        );
+      } catch {
+        alert("Could not save tasks in this browser.");
+      }
+    }
+
+    function renderTasks() {
+      taskList.replaceChildren();
+
+      const completed = tasks.filter(t => t.completed).length;
+      const total = tasks.length;
+      const percent = total ? Math.round(completed / total * 100) : 0;
+
+      document.getElementById("total").textContent = total;
+      document.getElementById("done").textContent = completed;
+      document.getElementById("pending").textContent =
+        total - completed;
+      document.getElementById("progressText").textContent =
+        percent + "% completed";
+      document.getElementById("progressFill").style.width =
+        percent + "%";
+
+      empty.hidden = total > 0;
+
+      tasks.forEach(task => {
+        const row = document.createElement("div");
+        row.className = "task" +
+          (task.completed ? " completed" : "");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = task.completed;
+        checkbox.setAttribute(
+          "aria-label", "Mark " + task.name + " completed"
+        );
+
+        checkbox.addEventListener("change", () => {
+          task.completed = checkbox.checked;
+          saveTasks();
+          renderTasks();
+        });
+
+        const info = document.createElement("div");
+        info.className = "task-info";
+
+        const name = document.createElement("strong");
+        name.textContent = task.name;
+
+        const details = document.createElement("p");
+        details.textContent =
+          task.subject + " • Due: " + task.date;
+
+        info.append(name, details);
+
+        const del = document.createElement("button");
+        del.className = "delete";
+        del.textContent = "Delete";
+        del.setAttribute("aria-label", "Delete " + task.name);
+
+        del.addEventListener("click", () => {
+          tasks = tasks.filter(t => t.id !== task.id);
+          saveTasks();
+          renderTasks();
+        });
+
+        row.append(checkbox, info, del);
+        taskList.appendChild(row);
+      });
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = document.getElementById("taskName").value.trim();
+      const subject = document.getElementById("subject").value;
+      const date = document.getElementById("dueDate").value;
+
+      if (!name || !date) return;
+
+      tasks.push({
+        id: crypto.randomUUID(),
+        name,
+        subject,
+        date,
+        completed: false
+      });
+
+      saveTasks();
+      renderTasks();
+      form.reset();
+      document.getElementById("taskName").focus();
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
